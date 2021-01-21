@@ -9,21 +9,24 @@
 # email: davi_soares@hotmail.com
 
 
-import pdf2image #
-import streamlit as st #
-import numpy as np #
-import cv2 #
-from PIL import Image #
-from skimage.metrics import structural_similarity as ssim #
-import imutils #
+import pdf2image  #
+import streamlit as st  #
+import numpy as np  #
+import cv2  #
+from PIL import Image  #
+from skimage.metrics import structural_similarity as ssim  #
+import imutils  #
 from email_validator import validate_email, EmailNotValidError
 import mysql.connector
 from mysql.connector import Error
+import base64
+import io
 
 Image.MAX_IMAGE_PIXELS = 1000000000000
 
 
-def connect(username, email, tipo, score, contador):
+@st.cache(suppress_st_warning=False)
+def connect(usuario, endemail, tipo, pontuacao, contador):
     """ Connect to MySQL database """
     conn = None
     try:
@@ -35,13 +38,45 @@ def connect(username, email, tipo, score, contador):
             print('Connected to MySQL database')
             mycursor = conn.cursor()
             sqlstring = "INSERT INTO transacoes(nome, email, tipo, SSIM, cnts) VALUES(%s, %s, %s, %s, %s)"
-            mycursor.execute(sqlstring, (username, email, tipo, score, contador))
+            mycursor.execute(sqlstring, (usuario, endemail, tipo, pontuacao, contador))
             conn.commit()
             print("Deu certo")
             conn.close()
     except Error as e:
         print(e)
 
+
+@st.cache(suppress_st_warning=False)
+def showtime(imageRef, imageMod, imageModRGB):
+    (score, diff) = ssim(imageRef, imageMod, full=True)
+    diff = (diff * 255).astype("uint8")
+    # st.sidebar.text("SSIM: {}".format(score))
+    thresh = cv2.threshold(diff, 0, 255,
+                           cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+    cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
+                            cv2.CHAIN_APPROX_SIMPLE)
+    cnts = imutils.grab_contours(cnts)
+    contador = 0
+    for c in cnts:
+        (x, y, w, h) = cv2.boundingRect(c)
+        cv2.rectangle(imageModRGB, (x, y), (x + w, y + h), (0, 0, 255), 3)
+        print(cv2.boundingRect(c))
+        contador = contador + 1
+    contador = contador / 4
+    return contador, score, imageModRGB
+
+
+@st.cache(suppress_st_warning=False)
+def get_image_download_link(img):
+    """Generates a link allowing the PIL image to be downloaded
+    in:  PIL image
+    out: href string
+    """
+    buffered = io.BytesIO()
+    img.save(buffered, format="JPEG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    href = f'<a href="data:file/png;base64,{img_str}">Download imagem</a>'
+    return href
 
 if __name__ == '__main__':
     st.set_page_config(
@@ -118,6 +153,7 @@ if __name__ == '__main__':
         imagem_modficada = col2.file_uploader("", type=['jpg', 'jpeg', 'png', 'pdf', 'tiff'], key="ImagemModif")
         if imagem_modficada is not None:
             if imagem_modficada.type == 'application/pdf':
+
                 imagesmod = pdf2image.convert_from_bytes(imagem_modficada.read())
                 for pagemod in imagesmod:
                     imagemmodexi = col2.empty()
@@ -150,41 +186,23 @@ if __name__ == '__main__':
     if expanderinicial:
         username = expanderinicial.text_input("Digite o seu nome.")
         email = expanderinicial.text_input("Digite o seu email")
-        if email != "":
+        btncomparar = st.button("Comparar")
+    if btncomparar:
+        if username is not None and email is not None:
             try:
                 # Validate.
                 valid = validate_email(email)
 
                 # Update with the normalized form.
                 email = valid.email
-                expanderinicial.info("Email confirmado")
 
             except EmailNotValidError as e:
                 # email is not valid, exception message is human-readable
                 expanderinicial.warning('Email inválido')
                 pass
-
-        btncomparar = st.button("Comparar")
-    if btncomparar:
-        if username is not None and email is not None:
             if imagem_modficada is not None and imagem_referencia is not None:
-                (score, diff) = ssim(imageRef, imageMod, full=True)
-                diff = (diff * 255).astype("uint8")
-                # st.sidebar.text("SSIM: {}".format(score))
-                thresh = cv2.threshold(diff, 0, 255,
-                                       cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
-                cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-                                        cv2.CHAIN_APPROX_SIMPLE)
-                cnts = imutils.grab_contours(cnts)
-                contador = 0
-                for c in cnts:
-                    (x, y, w, h) = cv2.boundingRect(c)
-                    cv2.rectangle(imageModRGB, (x, y), (x + w, y + h), (0, 0, 255), 3)
-                    print(cv2.boundingRect(c))
-                    contador = contador + 1
-                contador = contador / 4
+                contador, score, imageModRGB = showtime(imageRef, imageMod, imageModRGB)
                 st.success('Operação realizada com sucesso.')
-                # imagefinal = cv2.resize(imageB,(1920*2, 1080*2), interpolation=cv2.INTER_LINEAR)
                 if score < 1:
                     st.sidebar.title("Status")
                     st.sidebar.markdown("**Resultado:**" + " Diferença computada")
@@ -195,6 +213,10 @@ if __name__ == '__main__':
                         scoredb = "{:.2f}".format(score)
                         connect(username, email, opcao, scoredb, contador)
                         expander2.image(imageModRGB, use_column_width=True)
+                        imageModRGB = cv2.resize(imageModRGB, None, fx=1.6, fy=1.6, interpolation=cv2.INTER_LINEAR)
+                        result = Image.fromarray(imageModRGB)
+                        # st.subheader('**Download dos Dados**')
+                        st.markdown(get_image_download_link(result), unsafe_allow_html=True)
                 else:
                     st.sidebar.markdown("**Resultado:**" + " Arquivos iguais")
         else:
