@@ -59,7 +59,7 @@ def showtime(imageRef, imageMod, imageModRGB):
     contador = 0
     for c in cnts:
         (x, y, w, h) = cv2.boundingRect(c)
-        cv2.rectangle(imageModRGB, (x, y), (x + w, y + h), (0, 0, 255), 3)
+        cv2.rectangle(imageModRGB, (x, y), (x + w, y + h), (0, 0, 255), 2)
         print(cv2.boundingRect(c))
         contador = contador + 1
     contador = contador / 4
@@ -131,7 +131,8 @@ if __name__ == '__main__':
                     imagemexibicao = col1.image(dtimgref, use_column_width=True)
                     imageRefRGB = np.array(dtimgref.convert('RGB'))
                     imageRef = cv2.cvtColor(imageRefRGB, cv2.COLOR_RGB2GRAY)
-                    imageRef = cv2.resize(imageRef, None, fx=0.6, fy=0.6, interpolation=cv2.INTER_LINEAR)
+                    if imageRef.shape[1] > 2000:
+                        imageRef = cv2.resize(imageRef, None, fx=0.6, fy=0.6, interpolation=cv2.INTER_LINEAR)
                     w, h = imageRef.shape
                     dimensoes = col1.text(f"Dimensões: {w} x {h}")
                     boolimgref = True
@@ -161,7 +162,9 @@ if __name__ == '__main__':
                     col2.header(opcao + " para estudo")
                     imagemmodexi = col2.image(imageMod, use_column_width=True)
                     imageModRGB = np.array(imageMod.convert('RGB'))
-                    imageMod = cv2.resize(imageModRGB, None, fx=0.6, fy=0.6, interpolation=cv2.INTER_LINEAR)
+                    if imageMod.shape[1]>2000:
+                        print("reduzindo")
+                        imageMod = cv2.resize(imageModRGB, None, fx=0.6, fy=0.6, interpolation=cv2.INTER_LINEAR)
                     imageModRGB = imageMod
                     imageMod = cv2.cvtColor(imageMod, cv2.COLOR_RGB2GRAY)
                     w, h = imageMod.shape
@@ -213,7 +216,8 @@ if __name__ == '__main__':
                         scoredb = "{:.2f}".format(score)
                         connect(username, email, opcao, scoredb, contador)
                         expander2.image(imageModRGB, use_column_width=True)
-                        imageModRGB = cv2.resize(imageModRGB, None, fx=1.6, fy=1.6, interpolation=cv2.INTER_LINEAR)
+                        if imageModRGB.shape[1] > 2000:
+                            imageModRGB = cv2.resize(imageModRGB, None, fx=1.6, fy=1.6, interpolation=cv2.INTER_LINEAR)
                         result = Image.fromarray(imageModRGB)
                         # st.subheader('**Download dos Dados**')
                         st.markdown(get_image_download_link(result), unsafe_allow_html=True)
