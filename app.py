@@ -222,4 +222,5 @@ if __name__ == '__main__':
         else:
             expander.warning("Insira um nome e email válido")
     link = '[Criado por: Davi Soares](https://www.linkedin.com/in/davi-soares-batista-2a14692b/)'
+
     st.markdown(link, unsafe_allow_html=True)
