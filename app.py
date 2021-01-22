@@ -120,7 +120,7 @@ if __name__ == '__main__':
         opcao = expander.selectbox("Escolha um tipo de análise:", opcoes_menu, index=0, )
         col1, col2 = expander.beta_columns(2)
         col1.markdown("**Carregue o desenho referência**")
-        imagem_referencia = col1.file_uploader("", type=['jpg', 'jpeg', 'png', 'pdf', 'tiff'])
+        imagem_referencia = col1.file_uploader("", type=['jpg', 'jpeg', 'png', 'tiff'])
         if imagem_referencia is not None:
             if imagem_referencia.type == 'application/pdf':
                 images = pdf2image.convert_from_bytes(imagem_referencia.read())
@@ -150,7 +150,7 @@ if __name__ == '__main__':
             col1.image("placeholder.png", width=300)
             boolimgref = False
         col2.markdown("**Carregue o desenho a ser comparado**")
-        imagem_modficada = col2.file_uploader("", type=['jpg', 'jpeg', 'png', 'pdf', 'tiff'], key="ImagemModif")
+        imagem_modficada = col2.file_uploader("", type=['jpg', 'jpeg', 'png', 'tiff'], key="ImagemModif")
         if imagem_modficada is not None:
             if imagem_modficada.type == 'application/pdf':
 
