@@ -8,7 +8,7 @@
 
 # email: davi_soares@hotmail.com
 
-
+from datetime import datetime
 import pdf2image  #
 import streamlit as st  #
 import numpy as np  #
@@ -22,10 +22,11 @@ from mysql.connector import Error
 import base64
 import io
 
+
 Image.MAX_IMAGE_PIXELS = 1000000000000
 
 
-@st.cache(suppress_st_warning=False)
+@st.cache(suppress_st_warning=True)
 def connect(usuario, endemail, tipo, pontuacao, contador):
     """ Connect to MySQL database """
     conn = None
@@ -37,8 +38,10 @@ def connect(usuario, endemail, tipo, pontuacao, contador):
         if conn.is_connected():
             print('Connected to MySQL database')
             mycursor = conn.cursor()
-            sqlstring = "INSERT INTO transacoes(nome, email, tipo, SSIM, cnts) VALUES(%s, %s, %s, %s, %s)"
-            mycursor.execute(sqlstring, (usuario, endemail, tipo, pontuacao, contador))
+            now = datetime.now()
+            formatted_date = now.strftime('%Y-%m-%d %H:%M:%S')
+            sqlstring = "INSERT INTO transacoes(nome, email, tipo, SSIM, cnts, dt) VALUES(%s, %s, %s, %s, %s, %s)"
+            mycursor.execute(sqlstring, (usuario, endemail, tipo, pontuacao, contador, formatted_date))
             conn.commit()
             print("Deu certo")
             conn.close()
@@ -59,14 +62,15 @@ def showtime(imageRef, imageMod, imageModRGB):
     contador = 0
     for c in cnts:
         (x, y, w, h) = cv2.boundingRect(c)
-        cv2.rectangle(imageModRGB, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        cv2.rectangle(imageModRGB, (x, y), (x + w, y + h), (255, 0, 0), 2)
         print(cv2.boundingRect(c))
         contador = contador + 1
-    contador = contador / 4
+    print(contador)
+
     return contador, score, imageModRGB
 
 
-@st.cache(suppress_st_warning=False)
+@st.cache(suppress_st_warning=True)
 def get_image_download_link(img):
     """Generates a link allowing the PIL image to be downloaded
     in:  PIL image
@@ -113,6 +117,7 @@ if __name__ == '__main__':
     st.sidebar.title("Verificar", )
     st.sidebar.checkbox("Contorno", key="chkContorno")
     st.sidebar.checkbox("Texto", key="chkTexto")
+    value = st.sidebar.slider("slider", 0, 100, 25, 1)
     expander = st.beta_expander("Seleção de arquivos", expanded=True)
     if expander:
         expander.markdown("***Procure inserir documentos com comprimento máximo de 2500 pixels.***")
